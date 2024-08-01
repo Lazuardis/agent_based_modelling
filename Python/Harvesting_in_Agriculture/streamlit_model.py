@@ -7,6 +7,13 @@ from FieldModel import FieldModel
 # Streamlit app code
 st.title("Field Model Simulation")
 
+# write a description of the model using markdown and add link for more detail to http://www.github.com
+st.write("This is a simple Agent-Based model of a farm field where agents of farm block grow and produce crops. "
+            "The agents grow at a random rate each step, and when they reach a certain height, they can be harvested. "
+            "The model is implemented using the Mesa library. "
+            "For more details, see the [Further Article](https://medium.com/p/a6259081ab07).") 
+
+
 # Create sliders for the model parameters
 width = st.slider("Width", min_value=10, max_value=50, value=30, step=1)
 height = st.slider("Height", min_value=10, max_value=50, value=30, step=1)
