@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "agentbasedmodelling"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+streamlit = "1.37.0"
+matplotlib = "3.9.1"
+seaborn = "0.13.2"
+mesa = "2.3.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

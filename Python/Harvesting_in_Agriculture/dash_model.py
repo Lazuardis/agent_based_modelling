@@ -35,8 +35,6 @@ if 'figures' not in st.session_state:
 
 # Run model when the button is clicked
 if st.button("Run Model"):
-
-    st.session_state.figures = []
     # Create the model
     model = FieldModel(
         width=width,
@@ -100,13 +98,8 @@ if st.button("Run Model"):
     st.session_state.figures.extend(fig_list)
 
 # Display all stored figures in a 2x2 grid
-for i in range(0, len(st.session_state.figures), 2):
-    col1, col2 = st.columns(2)
-    with col1:
-        if i < len(st.session_state.figures):
-            st.subheader(st.session_state.figures[i][0])
-            st.pyplot(st.session_state.figures[i][1])
-    with col2:
-        if i + 1 < len(st.session_state.figures):
-            st.subheader(st.session_state.figures[i + 1][0])
-            st.pyplot(st.session_state.figures[i + 1][1])
+for i, (title, fig) in enumerate(st.session_state.figures):
+    col = st.columns(2)[i % 2]
+    with col:
+        st.subheader(title)
+        st.pyplot(fig)
