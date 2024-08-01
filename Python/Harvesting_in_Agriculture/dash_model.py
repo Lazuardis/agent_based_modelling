@@ -1,105 +1,130 @@
-import streamlit as st
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output, State
 import random
-import matplotlib.pyplot as plt
-import seaborn as sns
+import pandas as pd
+import plotly.express as px
 from FieldModel import FieldModel
 
-# Streamlit app code
-st.title("Field Model Simulation")
+# Set up the Dash app
+app = dash.Dash(__name__)
 
-# Create sliders for the model parameters
-width = st.slider("Width", min_value=10, max_value=50, value=30, step=1)
-height = st.slider("Height", min_value=10, max_value=50, value=30, step=1)
-minimum_height_to_harvest = st.slider("Minimum Height to Harvest",
-                                      min_value=0.0,
-                                      max_value=5.0,
-                                      value=2.4,
-                                      step=0.1)
-harvesting_capacity_per_step = st.slider("Harvesting Capacity per Step",
-                                         min_value=1,
-                                         max_value=10,
-                                         value=1,
-                                         step=1)
-rain_probability = st.slider("Rain Probability",
-                             min_value=0.0,
-                             max_value=1.0,
-                             value=0.3,
-                             step=0.05)
+# Layout of the Dash app
+app.layout = html.Div([
+    html.H1("Field Model Simulation"),
+    html.
+    P("This is a simple Agent-Based model of a farm field where agents of farm block grow and produce crops. "
+      "The agents grow at a random rate each step, and when they reach a certain height, they can be harvested. "
+      "The model is implemented using the Mesa library. "
+      "For more details, see the [Further Article](https://medium.com/p/a6259081ab07)."
+      ),
+    html.Label("Width"),
+    dcc.Slider(id='width-slider',
+               min=10,
+               max=50,
+               value=30,
+               step=1,
+               marks={i: str(i)
+                      for i in range(10, 51, 10)}),
+    html.Label("Height"),
+    dcc.Slider(id='height-slider',
+               min=10,
+               max=50,
+               value=30,
+               step=1,
+               marks={i: str(i)
+                      for i in range(10, 51, 10)}),
+    html.Label("Minimum Height to Harvest"),
+    dcc.Slider(id='min-height-slider',
+               min=0.0,
+               max=5.0,
+               value=2.4,
+               step=0.1,
+               marks={i / 10: str(i / 10)
+                      for i in range(0, 51, 10)}),
+    html.Label("Harvesting Capacity per Step"),
+    dcc.Slider(id='harvest-capacity-slider',
+               min=1,
+               max=10,
+               value=1,
+               step=1,
+               marks={i: str(i)
+                      for i in range(1, 11)}),
+    html.Label("Rain Probability"),
+    dcc.Slider(id='rain-probability-slider',
+               min=0.0,
+               max=1.0,
+               value=0.3,
+               step=0.05,
+               marks={i / 10: str(i / 10)
+                      for i in range(0, 11)}),
+    html.Button('Run Model', id='run-button', n_clicks=0),
+    html.Div(id='graphs')
+])
 
-# Set the random seed for reproducibility
-random.seed(100)
 
-# Initialize session state if it doesn't exist
-if 'figures' not in st.session_state:
-    st.session_state.figures = []
+# Callback to update the graphs based on the inputs
+@app.callback(Output('graphs', 'children'), Input('run-button', 'n_clicks'),
+              State('width-slider', 'value'), State('height-slider', 'value'),
+              State('min-height-slider', 'value'),
+              State('harvest-capacity-slider', 'value'),
+              State('rain-probability-slider', 'value'))
+def update_graphs(n_clicks, width, height, min_height, harvest_capacity,
+                  rain_prob):
+    if n_clicks > 0:
+        random.seed(100)
+        model = FieldModel(width,
+                           height,
+                           minimum_height_to_harvest=min_height,
+                           harvesting_capacity_per_step=harvest_capacity,
+                           rain_probability=rain_prob)
+        for i in range(3240):
+            model.step()
 
-# Run model when the button is clicked
-if st.button("Run Model"):
-    # Create the model
-    model = FieldModel(
-        width=width,
-        height=height,
-        minimum_height_to_harvest=minimum_height_to_harvest,
-        harvesting_capacity_per_step=harvesting_capacity_per_step,
-        rain_probability=rain_probability)
+        data = model.datacollector.get_model_vars_dataframe()
 
-    # Set up a progress bar
-    progress_bar = st.progress(0)
-    total_steps = 3240
+        # Create Plotly figures
+        figs = []
 
-    # Run the model with progress bar update
-    for i in range(total_steps):
-        model.step()
-        # Update the progress bar
-        progress = (i + 1) / total_steps
-        progress_bar.progress(progress)
+        # Plot Average Height Over Time
+        fig = px.line(data,
+                      y="Average Height",
+                      title="Average Height Over Time")
+        fig.update_xaxes(title="Steps")
+        fig.update_yaxes(title="Average Height")
+        figs.append(dcc.Graph(figure=fig))
 
-    # Extract and display results
-    data = model.datacollector.get_model_vars_dataframe()
+        # Plot Cashflow Over Time
+        fig = px.line(data, y="Cashflow", title="Cashflow Over Time")
+        fig.update_xaxes(title="Steps")
+        fig.update_yaxes(title="Cashflow")
+        figs.append(dcc.Graph(figure=fig))
 
-    # Store figures with titles
-    fig_list = []
+        # Plot Number Harvested Over Time
+        fig = px.line(data,
+                      y="Number Harvested",
+                      title="Number Harvested Over Time")
+        fig.update_xaxes(title="Steps")
+        fig.update_yaxes(title="Number Harvested")
+        figs.append(dcc.Graph(figure=fig))
 
-    # Plotting Average Height
-    fig, ax = plt.subplots()
-    ax.plot(data["Average Height"])
-    ax.set_xlabel("Steps")
-    ax.set_ylabel("Average Height")
-    ax.grid(True)
-    fig_list.append(("Average Height Over Time", fig))
+        # Plot Distribution of Agent Heights at Final Step
+        agent_height = model.datacollector.get_agent_vars_dataframe(
+        ).reset_index()
+        agent_data = agent_height[agent_height['Step'] == 3239]
+        fig = px.histogram(agent_data,
+                           x='Height',
+                           nbins=20,
+                           title="Distribution of Agent Heights at Final Step")
+        fig.update_xaxes(title="Height")
+        fig.update_yaxes(title="Frequency")
+        figs.append(dcc.Graph(figure=fig))
 
-    # Plotting Cashflow
-    fig, ax = plt.subplots()
-    ax.plot(data["Cashflow"])
-    ax.set_xlabel("Steps")
-    ax.set_ylabel("Cashflow")
-    ax.grid(True)
-    fig_list.append(("Cashflow Over Time", fig))
+        return figs
 
-    # Plotting Number Harvested
-    fig, ax = plt.subplots()
-    ax.plot(data["Number Harvested"])
-    ax.set_xlabel("Steps")
-    ax.set_ylabel("Number Harvested")
-    ax.grid(True)
-    fig_list.append(("Number Harvested Over Time", fig))
+    return []
 
-    # Extract agent data and plot height distribution
-    agent_height = model.datacollector.get_agent_vars_dataframe().reset_index()
-    agent_data = agent_height[agent_height['Step'] == 3239]
-    fig, ax = plt.subplots()
-    sns.histplot(data=agent_data, x='Height', bins=20, ax=ax)
-    ax.set_xlabel("Height")
-    ax.set_ylabel("Frequency")
-    ax.grid(True)
-    fig_list.append(("Distribution of Agent Heights at Final Step", fig))
 
-    # Store the figures in session state
-    st.session_state.figures.extend(fig_list)
-
-# Display all stored figures in a 2x2 grid
-for i, (title, fig) in enumerate(st.session_state.figures):
-    col = st.columns(2)[i % 2]
-    with col:
-        st.subheader(title)
-        st.pyplot(fig)
+# Run the app
+if __name__ == '__main__':
+    app.run_server(debug=True)

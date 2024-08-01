@@ -1,16 +1,8 @@
 modules = ["python-3.12", "nodejs-20"]
-run = "streamlit run ./Python/Harvesting_in_Agriculture/streamlit_model.py"
+run = "python ./Python/Harvesting_in_Agriculture/dash_model.py"
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = [
-  "sh",
-  "-c",
-  "streamlit run ./Python/Harvesting_in_Agriculture/streamlit_model.py",
-]
-
-[[ports]]
-localPort = 8501
-externalPort = 80
+run = ["sh", "-c", "python ./Python/Harvesting_in_Agriculture/dash_model.py"]

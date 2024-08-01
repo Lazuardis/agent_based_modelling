@@ -11,6 +11,8 @@ streamlit = "1.37.0"
 matplotlib = "3.9.1"
 seaborn = "0.13.2"
 mesa = "2.3.2"
+dash = "2.17.1"
+plotly = "5.23.0"
 
 
 [build-system]
